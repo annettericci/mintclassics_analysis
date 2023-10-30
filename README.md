@@ -119,8 +119,11 @@ Warehouse d (South): Trucks + buses, ships, trains
 ## Correlation between sales and amount of inventory in stock   
 For this part, I chose to use R because I prefer R for finding relationships between variables.  
 
+I imported the "inv" table that I created in SQL to RStudio.  
+
 install.packages("tidyverse")  
 library(tidyverse)  
+mintclassics_inv <- read.csv("C:/Users/Annette/OneDrive/Documents/R Files/mintclassics r files/mintclassics_inv.csv")  
 
 ggplot(data = mintclassics_inv) +  
   geom_point(mapping = aes(x = quantityInStock, y = TotalOrdered))  
