@@ -1,0 +1,125 @@
+# 1) Get Warehouses
+
+SELECT orderNumber, orderDate, SUM(TotalProfit) AS TotalProfit
+FROM dates
+GROUP BY orderNumber, orderDate
+
+
+# 2) Get order details
+
+SELECT *
+FROM orderdetails
+
+
+# 3) Product info by warehouse
+
+SELECT productCode, productName, productLine, quantityInStock, warehouseCode
+FROM products
+
+
+# 4) Creating a new filtered table for products
+
+CREATE TABLE products_filtered AS
+SELECT productCode, productName, productLine, quantityInStock, warehouseCode
+FROM products
+
+
+# 4.1) Sorted filtered products table
+
+SELECT *
+FROM products_filtered
+ORDER BY warehouseCode, productLine, quantityInStock DESC
+
+
+# 4.2) count of each product in product line
+
+SELECT productLine, COUNT(quantityInStock)
+FROM products_filtered
+GROUP BY productLine
+
+
+# 5) List of products by quantity ordered
+
+SELECT productCode, SUM(quantityOrdered)
+FROM orderdetails
+GROUP BY productCode
+ORDER BY SUM(quantityOrdered) DESC
+
+
+# 5.1) Created table summing quantity ordered
+
+CREATE TABLE quantity_ordered 
+AS SELECT productCode, SUM(quantityOrdered)  AS TotalOrdered
+FROM orderdetails  
+GROUP BY productCode
+
+
+# 5.2) Joined total ordered with product info
+
+SELECT p.productCode, p.productName, p.productLine, q.TotalOrdered, p.warehouseCode
+FROM products_filtered AS p
+INNER JOIN quantity_ordered AS q ON p.productCode = q.productCode
+ORDER BY q.TotalOrdered DESC
+
+
+# 5.3) Created new table showing prpularity and product info
+
+CREATE TABLE popularity AS 
+SELECT p.productCode, p.productName, p.productLine, q.TotalOrdered, p.warehouseCode 
+FROM products_filtered AS p 
+INNER JOIN quantity_ordered AS q ON p.productCode = q.productCode 
+ORDER BY q.TotalOrdered DESC
+
+
+# 6) creating table "inventory"
+
+CREATE TABLE inventory AS 
+SELECT p.productCode, p.productName, p.productLine, p.buyPrice, q.TotalOrdered, p.quantityInStock, p.warehouseCode 
+FROM products AS p 
+INNER JOIN quantity_ordered AS q ON p.productCode = q.productCode 
+ORDER BY q.TotalOrdered DESC
+
+
+# 6.1) creating new colum for total profit
+
+CREATE TABLE Profit AS 
+SELECT productCode, buyPrice*TotalOrdered AS TotalProfit 
+FROM inventory
+
+
+# 6.2) creating new table "inv" with added profit column
+
+CREATE TABLE inv AS 
+SELECT i.productCode, i.productName, i.productLine, i.buyPrice, i.TotalOrdered, p.TotalProfit, i.quantityInStock, i.warehouseCode  
+FROM inventory AS i  
+INNER JOIN Profit AS p ON i.productCode = p.productCode
+
+
+# 7) created table showing order details with dates
+
+CREATE TABLE dates AS
+SELECT od.orderNumber, od.productCode, od.quantityOrdered, od.priceEach, od.priceEach*od.quantityOrdered AS TotalProfit, o.orderDate
+FROM orderdetails AS od
+INNER JOIN orders AS o ON od.orderNumber = o.orderNumber
+WHERE orderDate BETWEEN "2004-01-01" AND "2004-12-31"
+
+
+# 7.1) created list of total profit by date
+
+SELECT orderNumber, orderDate, SUM(TotalProfit) AS TotalProfit
+FROM dates
+GROUP BY orderNumber, orderDate
+
+
+# 8) Creating an intermediate table for ideal on hand
+
+CREATE TABLE x AS 
+SELECT TotalOrdered, quantityInStock, TotalOrdered*1.2 AS IdealOH 
+FROM inv
+
+
+# 8.1) Creating table to show ideal on hand and difference
+
+CREATE TABLE IdealOnHand AS 
+SELECT TotalOrdered, quantityInStock, IdealOH, IdealOH-quantityInStock AS Difference 
+FROM x
